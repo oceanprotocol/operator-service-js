@@ -2,6 +2,7 @@ import express from "express";
 import { LOG_LEVELS_STR } from "../utils/logger";
 import { initPgSql } from "../handlers";
 import { checkAdmin } from "../utils";
+import { getJobInfo, listJobs } from "../handlers/adminHandlers";
 
 export const adminRoutes = express.Router();
 
@@ -26,7 +27,6 @@ adminRoutes.get("/info", async (req, res) => {
 
 		const jobId = req.query.jobId as string; // Type casting for safety
 
-		// Replace with actual logic to access job information using the Kubernetes API
 		const apiResponse = await getJobInfo(jobId); // Placeholder function
 
 		return res.status(200).json(apiResponse);
@@ -54,8 +54,6 @@ adminRoutes.get("/logs", async (req, res) => {
 			return res.status(400).send("Missing parameters");
 		}
 		const label = `workflow=${jobId}, component=${component}`;
-		// check_admin
-		// kube_api.list_namespaced_pod(label_selector=label_selector)
 	} catch (error) {
 		console.log(LOG_LEVELS_STR.LEVEL_ERROR, `Error: ${error}`);
 		res.status(500).send("Internal Server Error");
@@ -77,8 +75,9 @@ adminRoutes.get("/list", async (req, res) => {
 			);
 			return res.status(400).send("Missing parameters");
 		}
-		// check_admin
-		//  kube_api.list_namespaced_custom_object()
+		r;
+		const list = await listJobs(admin);
+		res.status(200).send();
 	} catch (error) {
 		console.log(LOG_LEVELS_STR.LEVEL_ERROR, `Error: ${error}`);
 		res.status(500).send("Internal Server Error");

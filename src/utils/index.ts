@@ -10,7 +10,6 @@ import {
 } from "../database/index";
 import { RequiredAttributes, SignatureValidation } from "../@types";
 
-const logger = console; // Replace with your logging library
 const keys = new KeyAPI(new ECDSA(new Web3().eth));
 
 // Function to generate a new ID without a prefix
@@ -43,15 +42,15 @@ export function checkRequiredAttributes(
 	data: any,
 	method: string
 ): RequiredAttributes {
-	logger.debug(`Got ${method} request: ${JSON.stringify(data)}`);
+	console.debug(`Got ${method} request: ${JSON.stringify(data)}`);
 	if (!data || typeof data !== "object") {
-		logger.error(`${method} request failed: data is empty.`);
+		console.error(`${method} request failed: data is empty.`);
 		return { message: "Payload seems empty.", statusCode: 400 };
 	}
 
 	for (const attribute of requiredAttributes) {
 		if (!(attribute in data)) {
-			logger.error(
+			console.error(
 				`${method} request failed: required attribute ${attribute} missing.`
 			);
 			return {
@@ -98,12 +97,12 @@ export function getListOfAllowedProviders(): string[] {
 	try {
 		const allowedList = JSON.parse(process.env.ALLOWED_PROVIDERS || "[]");
 		if (!Array.isArray(allowedList)) {
-			logger.error("Failed loading ALLOWED_PROVIDERS");
+			console.error("Failed loading ALLOWED_PROVIDERS");
 			return [];
 		}
 		return allowedList.map((p) => p.toLowerCase());
 	} catch (error) {
-		logger.error(`Error parsing ALLOWED_PROVIDERS: ${error}`);
+		console.error(`Error parsing ALLOWED_PROVIDERS: ${error}`);
 		return [];
 	}
 }
@@ -121,7 +120,7 @@ export async function processProviderSignatureValidation(
 
 		if (dbNonce && nonce <= dbNonce) {
 			const errorMessage = `Invalid signature expected nonce (${dbNonce}) > current nonce (${nonce}).`;
-			logger.error(errorMessage);
+			console.error(errorMessage);
 			throw new InvalidSignatureError(errorMessage);
 		} else {
 			await updateNonceForProvider(nonce.toString(), address);
@@ -162,7 +161,7 @@ export async function processProviderSignatureValidation(
 			address: address,
 		};
 	} catch (error) {
-		logger.error("Error processing provider signature validation:", error);
+		console.error("Error processing provider signature validation:", error);
 		return {
 			message: "Internal server error",
 			statusCode: 500,
@@ -203,7 +202,7 @@ export async function checkAdmin(
 		// Validate input and address missing admin
 		if (!admin) {
 			const errorMessage = "Admin header is empty.";
-			logger.error(errorMessage);
+			console.error(errorMessage);
 			return [errorMessage, 400];
 		}
 
@@ -211,15 +210,15 @@ export async function checkAdmin(
 		if (!allowedAdmins.includes(admin.toLowerCase())) {
 			const errorMessage =
 				"Access admin route failed due to invalid admin address.";
-			logger.error(errorMessage);
+			console.error(errorMessage);
 			return [errorMessage, 401];
 		}
 
 		// Valid admin, log success and return success message
-		logger.info("Valid admin.");
+		console.info("Valid admin.");
 		return ["Valid admin.", 200];
 	} catch (error) {
-		logger.error("Error checking admin:", error);
+		console.error("Error checking admin:", error);
 		return ["Internal server error", 500]; // Return generic error for unexpected issues
 	}
 }
@@ -338,7 +337,7 @@ export async function buildDownloadResponse(
 			downloadResponseHeaders
 		);
 	} catch (error) {
-		logger.error(`Error preparing file download response: ${error}`);
+		console.error(`Error preparing file download response: ${error}`);
 		throw error; // Re-throw to indicate the download failed
 	}
 }

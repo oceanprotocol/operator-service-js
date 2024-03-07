@@ -45,6 +45,19 @@ export async function getJobInfo(jobId: string) {
 	}
 }
 
+export async function listJobs(admin: string) {
+	try {
+		const msg = await checkAdmin(admin);
+		if (msg) {
+			throw new Error(msg[0]);
+		}
+		const jobs = await kubeAPI.listNamespacedCustomObject(this.plural);
+		return jobs;
+	} catch (error) {
+		throw new Error(`Error retrieving job information: ${error}`);
+	}
+}
+
 async function executeQueries(client: PoolClient) {
 	// Create the jobs table
 	await client.query(`
