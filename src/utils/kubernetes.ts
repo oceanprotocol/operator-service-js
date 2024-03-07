@@ -6,6 +6,9 @@ import {
 import Config from "./config";
 
 class KubeAPI {
+	getPodLogs(name: any, namespace: any) {
+		throw new Error("Method not implemented.");
+	}
 	private readonly k8sApi: CustomObjectsApi;
 	private readonly coreApi: CoreV1Api;
 	private readonly group: string;
@@ -18,6 +21,7 @@ class KubeAPI {
 			const kc = new KubeConfig();
 			kc.loadFromDefault();
 			this.k8sApi = kc.makeApiClient(CustomObjectsApi);
+			this.coreApi = kc.makeApiClient(CoreV1Api);
 		} catch (error) {
 			console.error("Failed to load Kubernetes configuration:", error);
 			throw error;
@@ -76,21 +80,41 @@ class KubeAPI {
 		}
 	}
 
-	// async readNamespacedPodLog(kind: string, name: string): Promise<any> {
-	// 	try {
-	// 		const resource = await this.k8sApi.readNamespacedPodLog(
-	// 			this.group,
-	// 			this.version,
-	// 			this.namespace,
-	// 			kind,
-	// 			name
-	// 		);
-	// 		return resource;
-	// 	} catch (error) {
-	// 		console.error(`Error getting ${kind} resource "${name}":`, error);
-	// 		return undefined;
-	// 	}
-	// }
+	async listNamespacedPod(labelSelector: string): Promise<any> {
+		try {
+			const resource = await this.coreApi.listNamespacedPod(
+				this.namespace,
+				null,
+				null,
+				null,
+				null,
+				labelSelector
+			);
+			return resource;
+		} catch (error) {
+			console.error(
+				`Error getting listNamespacedPod for namespace ${this.namespace}:`,
+				error
+			);
+			return undefined;
+		}
+	}
+
+	async readNamespacedPodLog(name: string): Promise<any> {
+		try {
+			const resource = await this.coreApi.readNamespacedPodLog(
+				name,
+				this.namespace
+			);
+			return resource;
+		} catch (error) {
+			console.error(
+				`Error getting listNamespacedPod for namespace ${this.namespace}:`,
+				error
+			);
+			return undefined;
+		}
+	}
 }
 
 export default KubeAPI;

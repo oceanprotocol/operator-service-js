@@ -58,6 +58,21 @@ export async function listJobs(admin: string) {
 	}
 }
 
+export async function getJobLogs(admin: string, labelSelector: string) {
+	try {
+		const msg = await checkAdmin(admin);
+		if (msg) {
+			throw new Error(msg[0]);
+		}
+		const podsResponse = await kubeAPI.listNamespacedPod(labelSelector);
+		const pods = podsResponse.body.items;
+		const logs = await kubeAPI.readNamespacedPodLog(pods[0].metadata.name);
+		return logs;
+	} catch (error) {
+		throw new Error(`Error retrieving job information: ${error}`);
+	}
+}
+
 async function executeQueries(client: PoolClient) {
 	// Create the jobs table
 	await client.query(`

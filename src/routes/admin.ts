@@ -2,7 +2,7 @@ import express from "express";
 import { LOG_LEVELS_STR } from "../utils/logger";
 import { initPgSql } from "../handlers";
 import { checkAdmin } from "../utils";
-import { getJobInfo, listJobs } from "../handlers/adminHandlers";
+import { getJobInfo, getJobLogs, listJobs } from "../handlers/adminHandlers";
 
 export const adminRoutes = express.Router();
 
@@ -42,7 +42,7 @@ adminRoutes.get("/logs", async (req, res) => {
 			`GET logs request received with query: ${JSON.stringify(req.query)}`,
 			true
 		);
-		const admin = req.headers.Admin;
+		const admin = req.headers.Admin as string;
 		const jobId = req.query.jobId as string;
 		const component = req.query.component as string;
 
@@ -54,6 +54,8 @@ adminRoutes.get("/logs", async (req, res) => {
 			return res.status(400).send("Missing parameters");
 		}
 		const label = `workflow=${jobId}, component=${component}`;
+		const logs = await getJobLogs(admin, label);
+		res.status(200).send(logs);
 	} catch (error) {
 		console.log(LOG_LEVELS_STR.LEVEL_ERROR, `Error: ${error}`);
 		res.status(500).send("Internal Server Error");
@@ -66,7 +68,7 @@ adminRoutes.get("/list", async (req, res) => {
 			`GET info request received with query: ${JSON.stringify(req.query)}`,
 			true
 		);
-		const admin = req.headers.Admin;
+		const admin = req.headers.Admin as string;
 
 		if (!admin) {
 			console.log(
@@ -75,7 +77,6 @@ adminRoutes.get("/list", async (req, res) => {
 			);
 			return res.status(400).send("Missing parameters");
 		}
-		r;
 		const list = await listJobs(admin);
 		res.status(200).send();
 	} catch (error) {
