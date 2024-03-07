@@ -1,137 +1,98 @@
-import { CustomObjectsApi, CoreV1Api } from "@kubernetes/client-node";
+import {
+	KubeConfig,
+	CustomObjectsApi,
+	CoreV1Api,
+} from "@kubernetes/client-node";
+import Config from "./config";
 
-// Configuration to connect to k8s.
-try {
-	const config = ; // Use kubernetes.loadConfig()
-} catch (error) {
-	logger.error("Failed to load Kubernetes config:", error);
-	process.exit(1);
-}
+class KubeAPI {
+	private readonly k8sApi: CustomObjectsApi;
+	private readonly coreApi: CoreV1Api;
+	private readonly group: string;
+	private readonly version: string;
+	private readonly namespace: string;
+	private readonly plural: string;
 
-export class KubeAPI {
-	//   // Create instances of the API classes
-	//   private apiCustomObject: CustomObjectsApi = new CustomObjectsApi(config)
-	//   private apiCore: CoreV1Api = new CoreV1Api(config)
-
-	// Configuration loaded from Config class
-	private group: string;
-	private version: string;
-	private namespace: string;
-	private plural: string;
-
-	constructor(config?: Config) {
-		if (!config) {
-			config = new Config();
+	constructor(config: Config) {
+		try {
+			const kc = new KubeConfig();
+			kc.loadFromDefault();
+			this.k8sApi = kc.makeApiClient(CustomObjectsApi);
+		} catch (error) {
+			console.error("Failed to load Kubernetes configuration:", error);
+			throw error;
 		}
+
 		this.group = config.group;
 		this.version = config.version;
 		this.namespace = config.namespace;
 		this.plural = config.plural;
 	}
-
-	// Create a namespaced custom object
-	public async createNamespacedCustomObject(body: any): Promise<void> {
+	async listResourcesByName(kind: string): Promise<any> {
 		try {
-			await this.apiCustomObject.createNamespacedCustomObject(
+			const list = await this.k8sApi.listNamespacedCustomObject(
 				this.group,
 				this.version,
 				this.namespace,
-				this.plural,
-				body
+				kind
 			);
+			return list.response;
 		} catch (error) {
-			logger.error("Error creating namespaced custom object:", error);
-			throw error; // Re-throw for further handling
+			console.error(`Error listing ${kind} resources:`, error);
+			throw error;
 		}
 	}
 
-	// Get a namespaced custom object
-	public async getNamespacedCustomObject(
-		jobId: string
-	): Promise<any | undefined> {
+	async delete_namespaced_custom_object(
+		kind: string,
+		name: string
+	): Promise<any> {
 		try {
-			const response = await this.apiCustomObject.getNamespacedCustomObject(
+			const resource = await this.k8sApi.deleteNamespacedCustomObject(
 				this.group,
 				this.version,
 				this.namespace,
 				this.plural,
-				jobId
+				name
 			);
-			return response.body;
+			return resource;
 		} catch (error) {
-			logger.error("Error getting namespaced custom object:", error);
+			console.error(`Error getting ${kind} resource "${name}":`, error);
 			return undefined;
 		}
 	}
 
-	// List namespaced custom objects
-	public async listNamespacedCustomObject(): Promise<any[]> {
+	async getResourceByName(name: string): Promise<any> {
 		try {
-			const response = await this.apiCustomObject.listNamespacedCustomObject(
-				this.group,
-				this.version,
-				this.namespace,
-				this.plural
-			);
-			return response.body.items;
-		} catch (error) {
-			logger.error("Error listing namespaced custom objects:", error);
-			return [];
-		}
-	}
-
-	// Delete a namespaced custom object
-	public async deleteNamespacedCustomObject(
-		name: string,
-		body: any,
-		gracePeriodSeconds?: number,
-		orphanDependents?: boolean,
-		propagationPolicy?: string
-	): Promise<void> {
-		try {
-			await this.apiCustomobject.deleteNamespacedCustomObject(
+			const resource = await this.k8sApi.getNamespacedCustomObject(
 				this.group,
 				this.version,
 				this.namespace,
 				this.plural,
-				name,
-				body,
-				{
-					gracePeriodSeconds,
-					orphanDependents,
-					propagationPolicy,
-				}
+				name
 			);
+			return resource;
 		} catch (error) {
-			logger.error("Error deleting namespaced custom object:", error);
-			throw error; // Re-throw for further handling
+			console.error(`Error getting resource "${name}":`, error);
+			return undefined;
 		}
 	}
 
-	// Read logs from a namespaced pod
-	public async readNamespacedPodLog(name: string): Promise<string> {
-		try {
-			const response = await this.apiCore.readNamespacedPodLog(
-				name,
-				this.namespace
-			);
-			return response.body;
-		} catch (error) {
-			logger.error("Error reading namespaced pod log:", error);
-			return "";
-		}
-	}
-
-	// List pods in a namespace with a label selector
-	public async listNamespacedPod(labelSelector?: string): Promise<any[]> {
-		try {
-			const response = await this.apiCore.listNamespacedPod(this.namespace, {
-				labelSelector,
-			});
-			return response.body.items;
-		} catch (error) {
-			logger.error("Error listing");
-		}
-		return [];
-	}
+	// async readNamespacedPodLog(kind: string, name: string): Promise<any> {
+	// 	try {
+	// 		const resource = await this.k8sApi.readNamespacedPodLog(
+	// 			this.group,
+	// 			this.version,
+	// 			this.namespace,
+	// 			kind,
+	// 			name
+	// 		);
+	// 		return resource;
+	// 	} catch (error) {
+	// 		console.error(`Error getting ${kind} resource "${name}":`, error);
+	// 		return undefined;
+	// 	}
+	// }
 }
+
+export default KubeAPI;

@@ -8,7 +8,7 @@ import {
 	getNonceForCertainProvider,
 	updateNonceForProvider,
 } from "../database/index";
-import { RequiredAttributes } from "../@types";
+import { RequiredAttributes, SignatureValidation } from "../@types";
 
 const logger = console; // Replace with your logging library
 const keys = new KeyAPI(new ECDSA(new Web3().eth));
