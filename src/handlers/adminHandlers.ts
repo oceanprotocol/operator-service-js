@@ -1,9 +1,14 @@
 import { Pool, PoolClient } from "pg"; // Assuming you're using pg
 import { checkAdmin } from "../utils";
+import { KubeConfig, v1 } from "@kubernetes/client-node";
+import KubeAPI from "../utils/kubernetes";
+import Config from "../utils/config";
 
 const pool = new Pool({
 	connectionString: process.env.DATABASE_URL, // Get connection string from environment variables
 });
+const config = new Config();
+const kubeAPI = new KubeAPI(config);
 
 export async function initPgSql(admin: string) {
 	const msg = await checkAdmin(admin);
@@ -33,12 +38,8 @@ export async function initPgSql(admin: string) {
 
 export async function getJobInfo(jobId: string) {
 	try {
-		const k8sApi = KubeConfig.fromCluster(); // Assuming you have a KubeConfig set up
-		const client = k8sApi.makeApiClient(v1.CoreV1Api);
-		// Replace with the actual Kubernetes API call to retrieve job information
-		// ... implement your logic to get job information using jobId
-		// return the retrieved job information object
-		return {}; // Replace with actual data
+		const jobInfo = kubeAPI.getNamespacedCustomObject(jobId);
+		return jobInfo;
 	} catch (error) {
 		throw new Error(`Error retrieving job information: ${error}`);
 	}

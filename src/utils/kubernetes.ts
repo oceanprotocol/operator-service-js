@@ -28,6 +28,7 @@ class KubeAPI {
 		this.namespace = config.namespace;
 		this.plural = config.plural;
 	}
+
 	async listResourcesByName(kind: string): Promise<any> {
 		try {
 			const list = await this.k8sApi.listNamespacedCustomObject(
@@ -62,7 +63,7 @@ class KubeAPI {
 		}
 	}
 
-	async getResourceByName(name: string): Promise<any> {
+	async getNamespacedCustomObject(name: string): Promise<any> {
 		try {
 			const resource = await this.k8sApi.getNamespacedCustomObject(
 				this.group,
