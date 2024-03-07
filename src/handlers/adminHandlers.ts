@@ -5,7 +5,7 @@ const pool = new Pool({
 	connectionString: process.env.DATABASE_URL, // Get connection string from environment variables
 });
 
-async function initPgSql(admin: string) {
+export async function initPgSql(admin: string) {
 	const msg = await checkAdmin(admin);
 	if (msg) {
 		throw new Error(msg[0]);
@@ -21,13 +21,26 @@ async function initPgSql(admin: string) {
 			await client.query("COMMIT");
 			return "PostgreSQL database initialized successfully";
 		} catch (error) {
-			await client.query("ROLLBACK"); // Rollback any changes on error
+			await client.query("ROLLBACK");
 			throw new Error(`Error PostgreSQL: ${error}`);
 		} finally {
 			client.release();
 		}
 	} catch (error) {
 		throw new Error(error);
+	}
+}
+
+export async function getJobInfo(jobId: string) {
+	try {
+		const k8sApi = KubeConfig.fromCluster(); // Assuming you have a KubeConfig set up
+		const client = k8sApi.makeApiClient(v1.CoreV1Api);
+		// Replace with the actual Kubernetes API call to retrieve job information
+		// ... implement your logic to get job information using jobId
+		// return the retrieved job information object
+		return {}; // Replace with actual data
+	} catch (error) {
+		throw new Error(`Error retrieving job information: ${error}`);
 	}
 }
 
@@ -74,18 +87,51 @@ async function executeQueries(client: PoolClient) {
 }
 
 async function createOrUpdateTables(client: PoolClient) {
-	// Replace with your table creation or update logic using the client
-	await client.query("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS ...");
-	// ...
+	// Add new column 'chainId' to jobs table
+	await client.query(`
+      ALTER TABLE jobs ADD COLUMN IF NOT EXISTS chainId varchar(255);
+    `);
+
+	// Create index on the 'owner' column in jobs table
+	await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_owner_jobs ON jobs(owner);
+    `);
 }
 
 async function createIndices(client: PoolClient) {
-	// Replace with your index creation logic using the client
-	await client.query("CREATE INDEX IF NOT EXISTS ...");
-	// ...
+	// Create a unique index on the 'agreementId', 'workflowId', and 'namespace' columns in the 'jobs' table
+	await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_job_unique_composite 
+        ON jobs(agreementId, workflowId, namespace);
+    `);
+
+	// Create an index on the 'status' column in the 'envs' table
+	await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_envs_status ON envs(status);
+    `);
 }
 
 async function createFunction(client: PoolClient) {
-	// Replace with your function creation logic using the client
-	await client.query("CREATE OR REPLACE FUNCTION ...");
+	// Replace with your actual function definition and arguments
+	await client.query(`
+      CREATE OR REPLACE FUNCTION announce_job_completion(
+        agreement_id varchar(255),
+        workflow_id varchar(255),
+        status int
+      ) RETURNS void AS $$
+      DECLARE
+        job_record RECORD;
+      BEGIN
+        SELECT * INTO job_record FROM jobs WHERE agreement_id = $1 AND workflow_id = $2;
+        
+        -- Update job status based on your logic using job_record and $3 (status)
+        UPDATE jobs SET status = $3 WHERE agreement_id = $1 AND workflow_id = $2;
+        
+        -- Additional logic or procedures based on completion (optional)
+        
+        -- Signal completion (e.g., call an external service, trigger an event)
+        
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
 }
