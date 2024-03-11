@@ -19,15 +19,15 @@ adminRoutes.get("/pgsqlinit", async (req, res) => {
 adminRoutes.get("/info", async (req, res) => {
 	try {
 		const admin = req.headers["Admin"] as string;
-		const msg = await checkAdmin(admin); // Assuming this function uses Kubernetes API
+		const msg = await checkAdmin(admin);
 
 		if (msg) {
 			throw new Error(msg[0]);
 		}
 
-		const jobId = req.query.jobId as string; // Type casting for safety
+		const jobId = req.query.jobId as string;
 
-		const apiResponse = await getJobInfo(jobId); // Placeholder function
+		const apiResponse = await getJobInfo(jobId);
 
 		return res.status(200).json(apiResponse);
 	} catch (error) {
@@ -78,7 +78,7 @@ adminRoutes.get("/list", async (req, res) => {
 			return res.status(400).send("Missing parameters");
 		}
 		const list = await listJobs(admin);
-		res.status(200).send();
+		res.status(200).send(list);
 	} catch (error) {
 		console.log(LOG_LEVELS_STR.LEVEL_ERROR, `Error: ${error}`);
 		res.status(500).send("Internal Server Error");

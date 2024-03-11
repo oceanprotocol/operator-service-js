@@ -14,7 +14,6 @@ resultsRoutes.get("/getResult", async (req, res) => {
 	try {
 		const data: GetIndexedResultQuery = req.query;
 
-		// Check for required parameters
 		if (!data.index || !data.jobId) {
 			return res
 				.status(400)
@@ -39,7 +38,6 @@ resultsRoutes.get("/getResult", async (req, res) => {
 
 		const { index, jobId, owner, providerSignature, nonce } = data;
 
-		// Verify provider signature
 		const {
 			message: messageSignatureValidation,
 			statusCode,
@@ -56,7 +54,6 @@ resultsRoutes.get("/getResult", async (req, res) => {
 		const outputs = await getSqlJobUrls(jobId);
 		const outputOwner = outputs[1];
 
-		// Check owner and provider mismatch
 		if (owner !== outputOwner) {
 			return res
 				.status(404)
@@ -70,7 +67,6 @@ resultsRoutes.get("/getResult", async (req, res) => {
 			});
 		}
 
-		// Check for results and index validity
 		if (!outputs || !Array.isArray(outputs)) {
 			return res.status(404).json({ error: `No results for job ${jobId}` });
 		}
@@ -86,7 +82,6 @@ resultsRoutes.get("/getResult", async (req, res) => {
 		}
 
 		try {
-			// todo: update this method and call
 			const downloadResponse = await buildDownloadResponse(
 				req,
 				res,
