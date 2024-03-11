@@ -1,4 +1,8 @@
 import Decimal from "decimal.js";
+import path from "path";
+import mime from "mime";
+import fs from "fs";
+import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { HelperResponse } from "../@types";
 
@@ -106,4 +110,111 @@ export function sanitizeResponseForProvider(d: any): any {
 
 export function generateNewId(): string {
 	return uuidv4().toString();
+}
+
+export function isVerifySignatureRequired(): boolean {
+	try {
+		return process.env.SIGNATURE_REQUIRED === "1";
+	} catch (error) {
+		return false;
+	}
+}
+
+export async function buildDownloadResponse(
+	request: Request,
+	requestsSession: any,
+	url: string,
+	content_type?: string
+): Promise<Response> {
+	return new Promise((resolve, reject) => {
+		try {
+			let downloadRequestHeaders: any = {};
+			let downloadResponseHeaders: any = {};
+			const isRangeRequest: boolean = !!request.headers.range;
+
+			if (isRangeRequest) {
+				downloadRequestHeaders = { Range: request.headers.range };
+				downloadResponseHeaders = downloadRequestHeaders;
+			}
+
+			// IPFS utils
+			const ipfsXApiKey: string | undefined = process.env.X_API_KEY;
+			if (ipfsXApiKey) {
+				downloadRequestHeaders["X-API-KEY"] = ipfsXApiKey;
+			}
+			const ipfsClientId: string | undefined = process.env.CLIENT_ID;
+			if (ipfsClientId) {
+				downloadRequestHeaders["CLIENT-ID"] = ipfsClientId;
+			}
+
+			const options = {
+				url: url,
+				headers: downloadRequestHeaders,
+				timeout: 3000,
+			};
+
+			requestsSession(options, (error: any, response: any) => {
+				if (error) {
+					reject(error);
+				} else {
+					let filename: string = path.basename(url);
+					if (!isRangeRequest) {
+						const contentDispositionHeader: string | undefined =
+							response.headers["content-disposition"];
+						if (contentDispositionHeader) {
+							const [, contentDispositionParams] = contentDispositionHeader
+								.split(";")
+								.map((item) => item.trim());
+							const contentFilename: string | undefined =
+								contentDispositionParams.split("=")[1];
+							if (contentFilename) {
+								filename = contentFilename.replace(/['"]+/g, "");
+							}
+						}
+
+						const contentTypeHeader: string | undefined =
+							response.headers["content-type"];
+						if (contentTypeHeader) {
+							content_type = contentTypeHeader;
+						}
+
+						const fileExt: string = path.extname(filename);
+						if (fileExt && !content_type) {
+							content_type = mime.getType(filename);
+							const extension: string | false = mime.extension(content_type);
+							if (extension) {
+								filename = `${filename}.${extension}`;
+							}
+						}
+
+						downloadResponseHeaders = {
+							"Content-Disposition": `attachment;filename=${filename}`,
+							"Access-Control-Expose-Headers": "Content-Disposition",
+						};
+					}
+
+					const stream = fs.createReadStream(response.body);
+					stream.on("error", (err) => {
+						reject(err);
+					});
+
+					resolve(response.statusMessage);
+					response.on("error", (err: any) => {
+						reject(err);
+					});
+					response.on("end", () => {
+						resolve(null);
+					});
+
+					return new Response(stream as any, {
+						...downloadResponseHeaders,
+						content_type,
+					});
+				}
+			});
+		} catch (e) {
+			console.error(`Error preparing file download response: ${e}`);
+			reject(e);
+		}
+	});
 }
